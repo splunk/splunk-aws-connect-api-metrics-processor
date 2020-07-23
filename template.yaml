@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Get Amazon Connect real-time and historic metric data from Connect REST
+  endpoints
+Resources:
+  SplunkAwsConnectApiMetricsProcessor:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      CodeUri: SplunkAwsConnectApiMetricsProcessor
+      Description: Get Amazon Connect real-time and historic metric data from Connect
+        REST endpoints
+      MemorySize: 128
+      Timeout: 3
+      Policies:
+      - AmazonConnectFullAccess
+      - AWSLambdaKinesisExecutionRole
+      Events:
+        Schedule1:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+      Environment:
+        Variables:
+          CONNECT_INSTANCE_ID:
+            Ref: ConnectInstanceId
+          KINESIS_STREAM_NAME:
+            Ref: KinesisStreamName
+Parameters:
+  ConnectInstanceId:
+    Type: String
+    Description: UUID of the Connect instance
+  KinesisStreamName:
+    Type: String
+    Description: The Kinesis stream name that was configured to send all Connect metrics
