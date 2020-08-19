@@ -20,7 +20,7 @@ Resources:
         Schedule1:
           Type: Schedule
           Properties:
-            Schedule: rate(5 minutes)
+            Schedule: rate(1 minute)
       Environment:
         Variables:
           CONNECT_INSTANCE_ID:
