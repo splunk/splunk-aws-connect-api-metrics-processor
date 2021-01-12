@@ -3,7 +3,7 @@ import boto3
 import datetime
 import json
 
-# The SplunkAwsConnectApiMetricsProcessor program retrieves connect metrics from two endpoints (getMetricData and getCurrentMetricData) for real-time and historical data.
+# The splunk-aws-connect-api-metrics-processor program retrieves connect metrics from two endpoints (getMetricData and getCurrentMetricData) for real-time and historical data.
 # The endpoints are queried twice once for queue specific metrics and again for aggregated queue metrics.
 # The results are then sent to be stored in a Kinesis Stream.
 
@@ -21,6 +21,7 @@ def get_queues(client, instance_id):
 			})
 
 	return queues
+
 
 # https://docs.aws.amazon.com/connect/latest/APIReference/API_GetMetricData.html
 def get_historic_metric_data(client, instance_id, queues, start_time, end_time, group=None):
@@ -279,8 +280,7 @@ def lambda_handler(event, context):
 
 	# Get metric records by queue
 	real_time_metrics_by_queue = get_current_metric_data(connect_client, instance_id, queues, "QUEUE")
-	historical_metrics_by_queue = get_historic_metric_data(connect_client, instance_id, queues, start_time,
-														   end_time_rounded, "QUEUE")
+	historical_metrics_by_queue = get_historic_metric_data(connect_client, instance_id, queues, start_time, end_time_rounded, "QUEUE")
 	metric_results_by_queue = real_time_metrics_by_queue['MetricResults'] + historical_metrics_by_queue['MetricResults']
 	for r in metric_results_by_queue:
 		for queue in queues:
@@ -293,16 +293,18 @@ def lambda_handler(event, context):
 	# aggregated real time metrics
 	agg_real_time_metrics_records = {}
 	agg_real_time_metrics = get_current_metric_data(connect_client, instance_id, queues)
-	agg_real_time_metrics_records['Data'] = json.dumps(agg_real_time_metrics['MetricResults'][0]).encode()
-	agg_real_time_metrics_records['PartitionKey'] = "Queue"
-	all_metric_records_for_all_queues.append(agg_real_time_metrics_records)
+	if agg_real_time_metrics['MetricResults']:
+		agg_real_time_metrics_records['Data'] = json.dumps(agg_real_time_metrics['MetricResults'][0]).encode()
+		agg_real_time_metrics_records['PartitionKey'] = "Queue"
+		all_metric_records_for_all_queues.append(agg_real_time_metrics_records)
 
 	# aggregated historic metrics
 	agg_historic_metrics_records = {}
 	agg_historic_metrics = get_historic_metric_data(connect_client, instance_id, queues, start_time, end_time_rounded)
-	agg_historic_metrics_records['Data'] = json.dumps(agg_historic_metrics['MetricResults'][0]).encode()
-	agg_historic_metrics_records['PartitionKey'] = "Queue"
-	all_metric_records_for_all_queues.append(agg_historic_metrics_records)
+	if agg_historic_metrics['MetricResults']:
+		agg_historic_metrics_records['Data'] = json.dumps(agg_historic_metrics['MetricResults'][0]).encode()
+		agg_historic_metrics_records['PartitionKey'] = "Queue"
+		all_metric_records_for_all_queues.append(agg_historic_metrics_records)
 
 	kinesis_client.put_records(
 		StreamName=os.environ['KINESIS_STREAM_NAME'],

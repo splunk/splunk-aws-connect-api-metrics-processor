@@ -9,7 +9,6 @@ __pycache__/
 # Distribution / packaging
 .Python
 .idea/
-.aws-sam
 build/
 develop-eggs/
 dist/
@@ -27,6 +26,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.toml
 MANIFEST
 
 # PyInstaller
