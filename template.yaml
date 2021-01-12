@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: Get Amazon Connect real-time and historic metric data from Connect REST endpoints
 Resources:
-  Processor:
+  MetricsProcessor:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: MetricsProcessor
