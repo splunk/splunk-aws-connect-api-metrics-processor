@@ -1,6 +1,16 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: Get Amazon Connect real-time and historic metric data from Connect REST endpoints
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: splunk-amazon-connect-api-metrics-processor
+    Description: Get Amazon Connect real-time and historic metric data from Connect REST endpoints
+    Author: Splunk
+    SpdxLicenseId: MIT
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    SemanticVersion: 0.0.1
+    SourceCodeUrl: https://github.com/splunk/splunk-aws-connect-api-metrics-processor
 Resources:
   MetricsProcessor:
     Type: AWS::Serverless::Function
