@@ -1,0 +1,329 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template to ingest data from AWS Kinesis Data Streams to Splunk via AWS Kinesis Firehose",
+  "Parameters": {
+    "KinesisStreamName": {
+      "Description": "AWS Kinesis Data Stream",
+      "Type": "String"
+    },
+    "SplunkHECEndpoint": {
+      "Description": "Splunk instance HEC endpoint that should receive data from the Kinesis Data Stream",
+      "Type": "String"
+    },
+    "SplunkHECToken": {
+      "Description": "Splunk instance HEC token that should receive data from the Kinesis Data Stream",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "KDSFirehoseDeliveryRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Sid": "",
+              "Effect": "Allow",
+              "Condition": {
+                "StringEquals": {
+                  "sts:ExternalId": {
+                    "Ref": "AWS::AccountId"
+                  }
+                }
+              },
+              "Principal": {
+                "Service": "firehose.amazonaws.com"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "KDSFirehoseDeliveryPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "firehose_delivery_policy",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "firehose:PutRecord",
+                "firehose:PutRecordBatch"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:kinesis:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":stream/%FIREHOSE_STREAM_NAME%"
+                    ]
+                  ]
+                }
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "kinesis:DescribeStream",
+                "kinesis:GetShardIterator",
+                "kinesis:GetRecords",
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:kinesis:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":stream/",
+                      {
+                        "Ref": "KinesisStreamName"
+                      }
+                    ]
+                  ]
+                }
+              ],
+              "Effect": "Allow"
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "KDSFirehoseDeliveryRole"
+          }
+        ]
+      }
+    },
+    "KDSFirehoseDeliveryStream": {
+      "Type": "AWS::KinesisFirehose::DeliveryStream",
+      "Properties": {
+        "DeliveryStreamType": "KinesisStreamAsSource",
+        "KinesisStreamSourceConfiguration": {
+          "KinesisStreamARN": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:aws:kinesis:",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ":",
+                {
+                  "Ref": "AWS::AccountId"
+                },
+                ":stream/",
+                {
+                  "Ref": "KinesisStreamName"
+                }
+              ]
+            ]
+          },
+          "RoleARN": {
+            "Fn::GetAtt": [
+              "KDSFirehoseDeliveryRole",
+              "Arn"
+            ]
+          }
+        },
+        "SplunkDestinationConfiguration": {
+          "S3Configuration": {
+            "CompressionFormat": "UNCOMPRESSED",
+            "BucketARN": {
+              "Fn::GetAtt": [
+                "KDSBackupS3Bucket",
+                "Arn"
+              ]
+            },
+            "RoleARN": {
+              "Fn::GetAtt": [
+                "KDSBackupS3Role",
+                "Arn"
+              ]
+            },
+            "BufferingHints": {
+              "IntervalInSeconds": 300,
+              "SizeInMBs": 1
+            }
+          },
+          "HECEndpointType": "Event",
+          "HECToken": {
+            "Ref": "SplunkHECToken"
+          },
+          "HECAcknowledgmentTimeoutInSeconds": 180,
+          "RetryOptions": {
+            "DurationInSeconds": 300
+          },
+          "HECEndpoint": {
+            "Ref": "SplunkHECEndpoint"
+          },
+          "S3BackupMode": "FailedEventsOnly"
+        }
+      },
+      "DependsOn": [
+        "KDSBackupS3Role",
+        "KDSFirehoseDeliveryPolicy"
+      ]
+    },
+    "KDSBackupS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        }
+      }
+    },
+    "KDSBackupS3Role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "KDSBackupS3Role",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "",
+                  "Effect": "Allow",
+                  "Action": [
+                    "glue:GetTableVersions"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:AbortMultipartUpload",
+                    "s3:GetBucketLocation",
+                    "s3:GetObject",
+                    "s3:ListBucket",
+                    "s3:ListBucketMultipartUploads",
+                    "s3:PutObject"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "",
+                  "Effect": "Allow",
+                  "Action": [
+                    "lambda:InvokeFunction",
+                    "lambda:GetFunctionConfiguration"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "",
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "",
+                  "Effect": "Allow",
+                  "Action": [
+                    "kinesis:DescribeStream",
+                    "kinesis:GetShardIterator",
+                    "kinesis:GetRecords"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "",
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:Decrypt"
+                  ],
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:kms:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":",
+                        {
+                          "Ref": "AWS::AccountId"
+                        },
+                        ":key/%SSE_KEY_ARN%"
+                      ]
+                    ]
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "kms:ViaService": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "kinesis.",
+                            {
+                              "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com"
+                          ]
+                        ]
+                      }
+                    },
+                    "StringLike": {
+                      "kms:EncryptionContext:aws:kinesis:arn": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:aws:kinesis:",
+                            {
+                              "Ref": "AWS::Region"
+                            },
+                            ":",
+                            {
+                              "Ref": "AWS::AccountId"
+                            },
+                            ":stream/%FIREHOSE_STREAM_NAME%"
+                          ]
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Sid": "",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "firehose.amazonaws.com"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

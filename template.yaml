@@ -23,7 +23,7 @@ Resources:
       Timeout: 3
       Policies:
       - AmazonConnect_FullAccess
-      - AWSLambdaFullAccess
+      - AWSLambda_FullAccess
       - AmazonKinesisFullAccess
       Events:
         Schedule1:
