@@ -9,7 +9,7 @@ Metadata:
     SpdxLicenseId: MIT
     LicenseUrl: LICENSE
     ReadmeUrl: README.md
-    SemanticVersion: 0.0.2
+    SemanticVersion: 0.0.3
     SourceCodeUrl: https://github.com/splunk/splunk-aws-connect-api-metrics-processor
 Resources:
   MetricsProcessor:
