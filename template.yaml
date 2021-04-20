@@ -20,7 +20,7 @@ Resources:
       Runtime: python3.8
       Description: Get Amazon Connect real-time and historic metric data from Connect REST endpoints
       MemorySize: 128
-      Timeout: 3
+      Timeout: 60
       Policies:
       - AmazonConnect_FullAccess
       - AWSLambda_FullAccess
