@@ -21,6 +21,39 @@ def get_queues(client, instance_id):
 			})
 
 	return queues
+#https://docs.aws.amazon.com/connect/latest/APIReference/API_GetCurrentUserData.html
+
+def get_current_user_data(client, instance_id, queues=None):
+    filters = {}
+    if queues:
+        filters['Queues'] = [q['Id'] for q in queues]
+
+    user_data_records = []
+    next_token = None
+
+    while True:
+        params = {
+            "InstanceId": instance_id,
+            "Filters": filters,
+            "MaxResults": 100
+        }
+        if next_token:
+            params["NextToken"] = next_token
+
+        response = client.get_current_user_data(**params)
+
+        for user_data in response.get('UserDataList', []):
+            record = {
+                'Data': json.dumps(user_data).encode(),
+                'PartitionKey': user_data['User']['Id']
+            }
+            user_data_records.append(record)
+
+        next_token = response.get("NextToken")
+        if not next_token:
+            break
+
+    return user_data_records
 
 
 # https://docs.aws.amazon.com/connect/latest/APIReference/API_GetMetricData.html
@@ -305,6 +338,10 @@ def lambda_handler(event, context):
 		agg_historic_metrics_records['Data'] = json.dumps(agg_historic_metrics['MetricResults'][0]).encode()
 		agg_historic_metrics_records['PartitionKey'] = "Queue"
 		all_metric_records_for_all_queues.append(agg_historic_metrics_records)
+	
+	# current user data (real-time)
+	user_data_records = get_current_user_data(connect_client, instance_id, queues)
+	all_metric_records_for_all_queues.extend(user_data_records)
 
 	kinesis_client.put_records(
 		StreamName=os.environ['KINESIS_STREAM_NAME'],
