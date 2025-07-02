@@ -24,9 +24,11 @@ def get_queues(client, instance_id):
 #https://docs.aws.amazon.com/connect/latest/APIReference/API_GetCurrentUserData.html
 
 def get_current_user_data(client, instance_id, queues=None):
-    filters = {}
-    if queues:
-        filters['Queues'] = [q['Id'] for q in queues]
+    if not queues:
+        return []
+
+    queue_ids = [q['Id'] for q in queues]
+    filters = {'Queues': queue_ids}
 
     user_data_records = []
     next_token = None
@@ -44,7 +46,7 @@ def get_current_user_data(client, instance_id, queues=None):
 
         for user_data in response.get('UserDataList', []):
             record = {
-                'Data': json.dumps(user_data).encode(),
+                'Data': json.dumps(user_data, default=str).encode(),
                 'PartitionKey': user_data['User']['Id']
             }
             user_data_records.append(record)
@@ -54,6 +56,8 @@ def get_current_user_data(client, instance_id, queues=None):
             break
 
     return user_data_records
+
+
 
 
 # https://docs.aws.amazon.com/connect/latest/APIReference/API_GetMetricData.html
