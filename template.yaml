@@ -21,10 +21,33 @@ Resources:
       Description: Get Amazon Connect real-time and historic metric data from Connect REST endpoints
       MemorySize: 128
       Timeout: 60
-      Policies:
-      - AmazonConnect_FullAccess
-      - AWSLambda_FullAccess
-      - AmazonKinesisFullAccess
+  Policies:
+    - Version: "2012-10-17"
+      Statement:
+
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+        - Effect: Allow
+          Action:
+            - connect:ListQueues
+            - connect:DescribeInstance
+            - connect:GetCurrentMetricData
+            - connect:GetMetricData
+            - connect:GetMetricDataV2
+            - connect:GetCurrentUserData
+          Resource: "*"
+
+        - Effect: Allow
+          Action:
+            - kinesis:PutRecords
+          Resource:
+            - !Sub arn:${AWS::Partition}:kinesis:${AWS::Region}:${AWS::AccountId}:stream/${KinesisStreamName}
+
       Events:
         Schedule1:
           Type: Schedule
