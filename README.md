@@ -162,6 +162,8 @@ Ensure your Connect instance and Kinesis stream are in the same account and regi
 
 To forward data from the Kinesis Data Stream to Splunk, you can use **Kinesis Data Firehose** with a Splunk (HEC) destination.
 
+If your goal is dashboards and analysis for Amazon Connect data in Splunk, you may also want to install the [Splunk App for Amazon Connect (Splunkbase)](https://splunkbase.splunk.com/app/5206) once data is flowing into your Splunk platform.
+
 There are two templates under `cloudformation/`:
 
 1. **`kds-to-splunk-via-kdf.json`**  
@@ -227,6 +229,12 @@ pip install -r requirements.txt
 ```
 
 The handler is `lambda_function.lambda_handler`. For local testing you can use [SAM local invoke](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-invoke.html) or run a script that simulates the event and environment variables.
+
+---
+
+## Further reading
+
+- [Levelling up your Amazon Connect with Splunk (PDF)](https://www.splunk.com/en_us/pdfs/resources/whitepaper/levelling-up-your-amazon-connect-with-splunk.pdf) — An end-to-end guide that covers common Amazon Connect ingest points and Splunk-side setup patterns.
 
 ---
 
